@@ -15,8 +15,8 @@ This directory contains GitHub Actions workflows for automated testing and valid
 1. **Setup**: Installs Rust (stable) and Node.js (v20) with dependency caching
 2. **Dependency Installation**: Uses `npm install` for both backend and frontend
 3. **Code Quality**: Runs linting on both backend and frontend (if configured)
-4. **Backend Tests**: Runs `npm test --if-present` in `/backend` (Vitest + TypeScript)
-5. **Frontend Tests**: Runs `npm test --if-present` in `/frontend` (Jest + React Testing Library)
+4. **Backend Tests**: Runs `npm test` in `/backend` (Vitest + TypeScript)
+5. **Frontend Tests**: Runs `npm test --if-present` in `/frontend` (no test framework configured yet)
 6. **Smart Contract Tests**: Runs `cargo test` in `/contracts` (Rust)
 
 **Failure Behavior**:
@@ -30,6 +30,7 @@ This directory contains GitHub Actions workflows for automated testing and valid
 - Ensure lint and test scripts are properly configured in `package.json`
 - Tests must pass in all directories where they exist
 - New dependencies should be added to respective `package.json` files
-- Backend uses Vitest, frontend uses Jest
+- Backend uses Vitest, frontend has no test framework configured yet
+- react-hot-toast is available as a root dependency
 
 **Note**: The workflow uses `continue-on-error: false` to ensure strict validation - any failure will prevent the PR from being merged.
