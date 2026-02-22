@@ -18,5 +18,8 @@
     "frontend/**/*.{ts,tsx,js,jsx}": [
       "cd frontend && npm run lint --"
     ]
+  },
+  "dependencies": {
+    "react-hot-toast": "^2.6.0"
   }
 }

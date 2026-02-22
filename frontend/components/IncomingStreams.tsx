@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import toast from "react-hot-toast";
 
 interface IncomingStreamData {
     id: string;
@@ -26,9 +27,18 @@ const IncomingStreams: React.FC = () => {
         ? mockIncomingStreams
         : mockIncomingStreams.filter(s => s.status === filter);
 
-    const handleWithdraw = (id: string) => {
-        console.log(`Withdrawing funds for stream: ${id}`);
-    };
+    const handleWithdraw = async (id: string) => {
+    const toastId = toast.loading("Transaction pending...");
+
+    try {
+        // Simulate async transaction (replace with real blockchain call later)
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        toast.success("Withdrawal successful!", { id: toastId });
+    } catch (error) {
+        toast.error("Transaction failed.", { id: toastId });
+    }
+};
 
     const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setFilter(e.target.value as 'All' | 'Active' | 'Completed' | 'Paused');
