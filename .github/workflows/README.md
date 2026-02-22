@@ -2,9 +2,9 @@
 
 This directory contains GitHub Actions workflows for automated testing and validation.
 
-## Test Workflow (`.github/workflows/test.yml`)
+## CI / Validation Workflow (`.github/workflows/test.yml`)
 
-**Purpose**: Prevents regressions by running all test suites on every pull request to main.
+**Purpose**: Prevents regressions by running all test suites and linting on every pull request to main.
 
 **Triggers**:
 
@@ -13,19 +13,23 @@ This directory contains GitHub Actions workflows for automated testing and valid
 **What it does**:
 
 1. **Setup**: Installs Rust (stable) and Node.js (v20) with dependency caching
-2. **Backend Tests**: Runs `npm test` in `/backend` (Jest + TypeScript)
-3. **Frontend Tests**: Runs `npm test` in `/frontend` (Jest + React Testing Library)
-4. **Smart Contract Tests**: Runs `cargo test` in `/contracts` (Rust)
+2. **Dependency Installation**: Uses `npm install` for both backend and frontend
+3. **Code Quality**: Runs linting on both backend and frontend (if configured)
+4. **Backend Tests**: Runs `npm test --if-present` in `/backend` (Vitest + TypeScript)
+5. **Frontend Tests**: Runs `npm test --if-present` in `/frontend` (Jest + React Testing Library)
+6. **Smart Contract Tests**: Runs `cargo test` in `/contracts` (Rust)
 
 **Failure Behavior**:
 
-- Workflow fails if any test suite fails
-- Blocks PR merge until all tests pass
+- Workflow fails if any test or linting step fails
+- Blocks PR merge until all checks pass
+- Uses `--if-present` to avoid failures when test scripts are missing
 
 **Requirements for Contributors**:
 
-- Ensure all test scripts are properly configured in `package.json`
-- Tests must exist and pass in all three directories
+- Ensure lint and test scripts are properly configured in `package.json`
+- Tests must pass in all directories where they exist
 - New dependencies should be added to respective `package.json` files
+- Backend uses Vitest, frontend uses Jest
 
-**Note**: The workflow uses `continue-on-error: false` to ensure strict validation - any test failure will prevent the PR from being merged.
+**Note**: The workflow uses `continue-on-error: false` to ensure strict validation - any failure will prevent the PR from being merged.
