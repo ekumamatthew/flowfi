@@ -2,6 +2,7 @@
 import React from "react";
 
 import {
+  getDashboardAnalytics,
   getMockDashboardStats,
   type DashboardSnapshot,
 } from "@/lib/dashboard";
@@ -35,6 +36,20 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+function formatAnalyticsValue(
+  value: number,
+  format: "currency" | "percent",
+): string {
+  if (format === "currency") {
+    return formatCurrency(value);
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "percent",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 function formatActivityTime(timestamp: string): string {
   const date = new Date(timestamp);
 
@@ -46,6 +61,41 @@ function formatActivityTime(timestamp: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function renderAnalytics(snapshot: DashboardSnapshot | null) {
+  const metrics = getDashboardAnalytics(snapshot);
+
+  return (
+    <section className="dashboard-analytics-section" aria-label="Analytics overview">
+      <div className="dashboard-panel__header">
+        <h3>Analytics Overview</h3>
+        <span>Computed from wallet activity</span>
+      </div>
+
+      <div className="dashboard-analytics-grid">
+        {metrics.map((metric) => {
+          const isUnavailable = metric.value === null;
+
+          return (
+            <article
+              key={metric.id}
+              className="dashboard-analytics-card"
+              data-unavailable={isUnavailable ? "true" : undefined}
+            >
+              <p>{metric.label}</p>
+              <h2>
+                {isUnavailable
+                  ? "No data"
+                  : formatAnalyticsValue(metric.value, metric.format)}
+              </h2>
+              <span>{isUnavailable ? metric.unavailableText : metric.detail}</span>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 function renderStats(snapshot: DashboardSnapshot) {
@@ -202,23 +252,27 @@ export function DashboardView({ session, onDisconnect }: DashboardViewProps) {
     if (activeTab === "overview") {
         if (!stats) {
             return (
-                <section className="dashboard-empty-state">
-                  <h2>No stream data yet</h2>
-                  <p>
-                    Your account is connected, but there are no active or historical
-                    stream records available yet.
-                  </p>
-                  <ul>
-                    <li>Create your first payment stream</li>
-                    <li>Invite a recipient to start receiving funds</li>
-                    <li>Check back once transactions are confirmed</li>
-                  </ul>
-                </section>
+                <div className="dashboard-content-stack mt-8">
+                  {renderAnalytics(null)}
+                  <section className="dashboard-empty-state">
+                    <h2>No stream data yet</h2>
+                    <p>
+                      Your account is connected, but there are no active or historical
+                      stream records available yet.
+                    </p>
+                    <ul>
+                      <li>Create your first payment stream</li>
+                      <li>Invite a recipient to start receiving funds</li>
+                      <li>Check back once transactions are confirmed</li>
+                    </ul>
+                  </section>
+                </div>
             );
         }
         return (
             <div className="dashboard-content-stack mt-8">
               {renderStats(stats)}
+              {renderAnalytics(stats)}
               {renderStreams(stats, handleTopUp)}
               {renderRecentActivity(stats)}
             </div>
