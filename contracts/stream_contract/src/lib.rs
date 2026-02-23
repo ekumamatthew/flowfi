@@ -10,6 +10,8 @@ use soroban_sdk::{
 pub enum DataKey {
     Stream(u64),
     StreamCounter,
+    Admin,
+    EmergencyStop,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -33,6 +35,9 @@ pub enum StreamError {
     StreamNotFound = 2,
     Unauthorized = 3,
     StreamInactive = 4,
+    AlreadyInitialized = 5,
+    NotAdmin = 6,
+    EmergencyStopEnabled = 7,
 }
 
 #[contracttype]
@@ -73,11 +78,61 @@ pub struct StreamToppedUpEvent {
     pub new_deposited_amount: i128,
 }
 
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EmergencyStopToggledEvent {
+    pub enabled: bool,
+    pub admin: Address,
+}
+
 #[contract]
 pub struct StreamContract;
 
 #[contractimpl]
 impl StreamContract {
+    /// Initializes the contract with an admin address.
+    pub fn initialize(env: Env, admin: Address) -> Result<(), StreamError> {
+        if env.storage().instance().has(&DataKey::Admin) {
+            return Err(StreamError::AlreadyInitialized);
+        }
+        env.storage().instance().set(&DataKey::Admin, &admin);
+        Ok(())
+    }
+
+    /// Toggles the emergency stop mode. Only the admin can call this.
+    pub fn set_emergency_mode(env: Env, admin: Address, enabled: bool) -> Result<(), StreamError> {
+        admin.require_auth();
+
+        let stored_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(StreamError::Unauthorized)?;
+
+        if admin != stored_admin {
+            return Err(StreamError::NotAdmin);
+        }
+
+        env.storage()
+            .instance()
+            .set(&DataKey::EmergencyStop, &enabled);
+
+        env.events().publish(
+            (Symbol::new(&env, "emergency_stop_toggled"),),
+            EmergencyStopToggledEvent { enabled, admin },
+        );
+
+        Ok(())
+    }
+
+    /// Checks if the emergency stop is active.
+    pub fn is_emergency_mode(env: Env) -> bool {
+        env.storage()
+            .instance()
+            .get(&DataKey::EmergencyStop)
+            .unwrap_or(false)
+    }
+
     pub fn create_stream(
         env: Env,
         sender: Address,
@@ -87,6 +142,10 @@ impl StreamContract {
         duration: u64,
     ) -> u64 {
         sender.require_auth();
+
+        if Self::is_emergency_mode(env.clone()) {
+            panic_with_error!(&env, StreamError::EmergencyStopEnabled);
+        }
 
         if amount <= 0 || duration == 0 {
             panic_with_error!(&env, StreamError::InvalidAmount);
@@ -237,6 +296,10 @@ impl StreamContract {
         amount: i128,
     ) -> Result<(), StreamError> {
         sender.require_auth();
+
+        if Self::is_emergency_mode(env.clone()) {
+            return Err(StreamError::EmergencyStopEnabled);
+        }
 
         if amount <= 0 {
             return Err(StreamError::InvalidAmount);

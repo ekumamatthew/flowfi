@@ -3,7 +3,7 @@
 extern crate std;
 
 use super::*;
-use soroban_sdk::{testutils::Address as _, token, xdr, Address, Env, Symbol, TryFromVal};
+use soroban_sdk::{testutils::Address as _, token, xdr, Address, Env, Error, Symbol, TryFromVal};
 
 fn create_token_contract(env: &Env) -> (Address, Address) {
     let admin = Address::generate(env);
@@ -218,7 +218,7 @@ fn test_top_up_stream_inactive() {
     let client = StreamContractClient::new(&env, &contract_id);
 
     let stream_id = client.create_stream(&sender, &recipient, &token_address, &10_000, &100);
-    let _ = client.cancel_stream(&sender, &stream_id);
+    client.cancel_stream(&sender, &stream_id);
 
     let result = client.try_top_up_stream(&sender, &stream_id, &1_000);
     assert_eq!(result, Err(Ok(StreamError::StreamInactive)));
@@ -258,4 +258,105 @@ fn datakey_stream_serializes_deterministically_and_works_in_storage() {
         let stored: Stream = env.storage().persistent().get(&key).unwrap();
         assert_eq!(stored, stream);
     });
+}
+
+#[test]
+fn test_set_emergency_mode_admin_only() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(StreamContract, ());
+    let client = StreamContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let attacker = Address::generate(&env);
+
+    client.initialize(&admin);
+
+    // Attacker tries to enable emergency stop
+    let result = client.try_set_emergency_mode(&attacker, &true);
+    assert_eq!(result, Err(Ok(StreamError::NotAdmin)));
+    assert!(!client.is_emergency_mode());
+
+    // Admin enables emergency stop
+    client.set_emergency_mode(&admin, &true);
+    assert!(client.is_emergency_mode());
+
+    // Admin disables emergency stop
+    client.set_emergency_mode(&admin, &false);
+    assert!(!client.is_emergency_mode());
+}
+
+#[test]
+fn test_create_stream_fails_in_emergency() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (token_address, _admin) = create_token_contract(&env);
+    let sender = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    let protocol_admin = Address::generate(&env);
+
+    let contract_id = env.register(StreamContract, ());
+    let client = StreamContractClient::new(&env, &contract_id);
+
+    client.initialize(&protocol_admin);
+    client.set_emergency_mode(&protocol_admin, &true);
+
+    let result = client.try_create_stream(&sender, &recipient, &token_address, &500, &100);
+    assert_eq!(result, Err(Ok(Error::from_contract_error(7))));
+}
+
+#[test]
+fn test_top_up_stream_fails_in_emergency() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (token_address, _admin) = create_token_contract(&env);
+    let sender = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    let protocol_admin = Address::generate(&env);
+
+    let stellar_asset = token::StellarAssetClient::new(&env, &token_address);
+    stellar_asset.mint(&sender, &1_000);
+
+    let contract_id = env.register(StreamContract, ());
+    let client = StreamContractClient::new(&env, &contract_id);
+
+    client.initialize(&protocol_admin);
+    let stream_id = client.create_stream(&sender, &recipient, &token_address, &500, &100);
+
+    client.set_emergency_mode(&protocol_admin, &true);
+
+    let result = client.try_top_up_stream(&sender, &stream_id, &100);
+    assert_eq!(result, Err(Ok(StreamError::EmergencyStopEnabled)));
+}
+
+#[test]
+fn test_withdraw_allowed_in_emergency() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (token_address, _admin) = create_token_contract(&env);
+    let sender = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    let protocol_admin = Address::generate(&env);
+
+    let stellar_asset = token::StellarAssetClient::new(&env, &token_address);
+    stellar_asset.mint(&sender, &1_000);
+
+    let contract_id = env.register(StreamContract, ());
+    let client = StreamContractClient::new(&env, &contract_id);
+    let token_client = token::Client::new(&env, &token_address);
+
+    client.initialize(&protocol_admin);
+    let stream_id = client.create_stream(&sender, &recipient, &token_address, &500, &100);
+
+    client.set_emergency_mode(&protocol_admin, &true);
+
+    let recipient_balance_before = token_client.balance(&recipient);
+    client.withdraw(&recipient, &stream_id);
+    let recipient_balance_after = token_client.balance(&recipient);
+
+    assert_eq!(recipient_balance_after - recipient_balance_before, 500);
 }
