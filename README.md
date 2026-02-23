@@ -95,6 +95,14 @@ cd contracts
 cargo build --target wasm32-unknown-unknown --release
 ```
 
+## API Documentation
+
+The FlowFi backend API uses URL-based versioning. All endpoints are prefixed with a version (e.g., `/v1/streams`).
+
+- **API Versioning Guide**: [backend/docs/API_VERSIONING.md](backend/docs/API_VERSIONING.md)
+- **Deprecation Policy**: [backend/docs/DEPRECATION_POLICY.md](backend/docs/DEPRECATION_POLICY.md)
+- **API Docs**: Available at `http://localhost:3001/api-docs` when backend is running
+
 ## Contributing
 
 Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for:
