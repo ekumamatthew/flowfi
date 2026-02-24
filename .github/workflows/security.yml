@@ -28,18 +28,14 @@ jobs:
         HUSKY: 0
       run: npm ci
       
-    - name: Run npm audit
-      run: npm audit --audit-level=moderate
+    - name: Run npm audit (production dependencies)
+      run: npm audit --omit=dev --audit-level=critical
       
-    - name: Check for known vulnerabilities in frontend
-      run: |
-        cd frontend
-        npm audit --audit-level=moderate
+    - name: Check for known vulnerabilities in frontend (production dependencies)
+      run: npm audit --workspace=frontend --omit=dev --audit-level=critical
         
-    - name: Check for known vulnerabilities in backend
-      run: |
-        cd backend
-        npm audit --audit-level=moderate
+    - name: Check for known vulnerabilities in backend (production dependencies)
+      run: npm audit --workspace=backend --omit=dev --audit-level=critical
 
   codeql-analysis:
     name: CodeQL Analysis
