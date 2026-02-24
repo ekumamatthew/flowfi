@@ -12,7 +12,7 @@ export default function IncomingPage() {
     const [loading, setLoading] = useState(true);
     const [prevKey, setPrevKey] = useState(session?.publicKey);
 
-    // Reset loading state if public key changes
+    // Reset loading state if public key changes (preferred over useEffect for this)
     if (session?.publicKey !== prevKey) {
         setPrevKey(session?.publicKey);
         setLoading(true);

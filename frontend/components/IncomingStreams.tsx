@@ -19,7 +19,9 @@ const IncomingStreams: React.FC<IncomingStreamsProps> = ({ streams }) => {
         const toastId = toast.loading("Transaction pending...");
 
         try {
+            // Simulate async transaction (replace with real blockchain call later)
             await new Promise((resolve) => setTimeout(resolve, 2000));
+
             toast.success("Withdrawal successful!", { id: toastId });
         } catch {
             toast.error("Transaction failed.", { id: toastId });
@@ -68,7 +70,7 @@ const IncomingStreams: React.FC<IncomingStreamsProps> = ({ streams }) => {
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {filteredStreams.map((stream) => (
                             <tr key={stream.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">{stream.recipient}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">{stream.id}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{stream.token}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{stream.deposited} {stream.token}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 font-bold">{stream.withdrawn} {stream.token}</td>

@@ -5,11 +5,17 @@ export interface BackendUser {
     updatedAt: string;
 }
 
+export type StreamEventType = "CREATED" | "TOPPED_UP" | "WITHDRAWN" | "CANCELLED" | "COMPLETED";
+
 export interface BackendStreamEvent {
     id: string;
-    streamId: string;
-    eventType: string;
-    data: string;
+    streamId: number;
+    eventType: StreamEventType;
+    amount: string | null;
+    transactionHash: string;
+    ledgerSequence: number;
+    timestamp: number;
+    metadata: string | null;
     createdAt: string;
 }
 

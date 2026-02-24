@@ -1,4 +1,3 @@
-import type { WalletId } from "@/lib/wallet";
 import type { BackendStream } from "./api-types";
 
 export interface ActivityItem {
@@ -46,14 +45,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/v
  * Maps a backend stream object to the frontend Stream interface.
  */
 function mapBackendStreamToFrontend(s: BackendStream): Stream {
-  const deposited = parseFloat(s.depositedAmount) / 1e7;
+  const deposited = parseFloat(s.depositedAmount) / 1e7; // Assuming 7 decimals for now, should ideally come from token config
   const withdrawn = parseFloat(s.withdrawnAmount) / 1e7;
 
   return {
     id: s.streamId.toString(),
     recipient: s.recipient.slice(0, 4) + "..." + s.recipient.slice(-4),
     amount: deposited,
-    token: "TOKEN", // Placeholder
+    token: "TOKEN", // We don't have token symbols from backend yet
     status: s.isActive ? "Active" : "Completed",
     deposited,
     withdrawn,
@@ -62,7 +61,7 @@ function mapBackendStreamToFrontend(s: BackendStream): Stream {
 }
 
 /**
- * Fetches dashboard data for a given public key.
+ * Fetches dashboard data for a given public key by querying both outgoing and incoming streams.
  */
 export async function fetchDashboardData(publicKey: string): Promise<DashboardSnapshot> {
   try {
@@ -101,7 +100,7 @@ export async function fetchDashboardData(publicKey: string): Promise<DashboardSn
       totalReceived += parseFloat(s.withdrawnAmount) / 1e7;
     });
 
-    // Generate recent activity
+    // Generate recent activity from streams (simplified for now)
     const recentActivity: ActivityItem[] = [
       ...outgoing.map(s => ({
         id: `act-out-${s.id}`,
