@@ -3,7 +3,7 @@ import React from "react";
 
 import {
   getDashboardAnalytics,
-  getMockDashboardStats,
+  fetchDashboardData,
   type DashboardSnapshot,
 } from "@/lib/dashboard";
 import { shortenPublicKey, type WalletSession } from "@/lib/wallet";
@@ -126,7 +126,7 @@ function renderAnalytics(snapshot: DashboardSnapshot | null) {
               <h2>
                 {isUnavailable
                   ? "No data"
-                  : formatAnalyticsValue(metric.value, metric.format)}
+                  : formatAnalyticsValue(metric.value!, metric.format)}
               </h2>
               <span>{isUnavailable ? metric.unavailableText : metric.detail}</span>
             </article>
@@ -186,7 +186,7 @@ function renderStreams(
     <section className="dashboard-panel">
       <div className="dashboard-panel__header">
         <h3>My Active Streams</h3>
-        <span>{snapshot.streams.length} total</span>
+        <span>{snapshot.outgoingStreams.length} total</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -201,7 +201,7 @@ function renderStreams(
             </tr>
           </thead>
           <tbody>
-            {snapshot.streams.map((stream) => (
+            {snapshot.outgoingStreams.map((stream) => (
               <tr key={stream.id}>
                 <td>{stream.date}</td>
                 <td>
@@ -543,7 +543,7 @@ export function DashboardView({ session, onDisconnect }: DashboardViewProps) {
 
   const renderContent = () => {
     if (activeTab === "incoming") {
-      return <div className="mt-8"><IncomingStreams /></div>;
+      return <div className="mt-8"><IncomingStreams streams={stats?.incomingStreams || []} /></div>;
     }
 
     if (activeTab === "streams") {
@@ -788,42 +788,63 @@ export function DashboardView({ session, onDisconnect }: DashboardViewProps) {
     }
 
     if (activeTab === "overview") {
-        if (!stats) {
-            return (
-                <section className="dashboard-empty-state">
-                  <h2>No stream data yet</h2>
-                  <p>
-                    Your account is connected, but there are no active or historical
-                    stream records available yet.
-                  </p>
-                  <ul>
-                    <li>Create your first payment stream</li>
-                    <li>Invite a recipient to start receiving funds</li>
-                    <li>Check back once transactions are confirmed</li>
-                  </ul>
-                  <div className="mt-6">
-                    <Button onClick={() => setShowWizard(true)} glow>
-                      Create Your First Stream
-                    </Button>
-                  </div>
-                </section>
-            );
-        }
+      if (loading) {
         return (
-            <div className="dashboard-content-stack mt-8">
-              {renderStats(stats)}
-              {renderAnalytics(stats)}
-              {renderStreams(stats, handleTopUp)}
-              {renderRecentActivity(stats)}
-            </div>
+          <div className="dashboard-loading-state mt-8">
+            <div className="spinner"></div>
+            <p>Fetching your stream data...</p>
+          </div>
         );
-    }
-    
-    return (
-        <div className="dashboard-empty-state mt-8">
-            <h2>Under Construction</h2>
-            <p>This tab is currently under development.</p>
+      }
+
+      if (error) {
+        return (
+          <div className="dashboard-error-state mt-8">
+            <h3>Oops! Something went wrong</h3>
+            <p>{error}</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
+          </div>
+        );
+      }
+
+      if (!stats || (stats.outgoingStreams.length === 0 && stats.recentActivity.length === 0)) {
+        return (
+          <section className="dashboard-empty-state">
+            <h2>No stream data yet</h2>
+            <p>
+              Your account is connected, but there are no active or historical
+              stream records available yet.
+            </p>
+            <ul>
+              <li>Create your first payment stream</li>
+              <li>Invite a recipient to start receiving funds</li>
+              <li>Check back once transactions are confirmed</li>
+            </ul>
+            <div className="mt-6">
+              <Button onClick={() => setShowWizard(true)} glow>
+                Create Your First Stream
+              </Button>
+            </div>
+          </section>
+        );
+      }
+      return (
+        <div className="dashboard-content-stack mt-8">
+          {renderStats(stats)}
+          {renderAnalytics(stats)}
+          {renderStreams(stats, handleTopUp)}
+          {renderRecentActivity(stats)}
         </div>
+      );
+    }
+
+    return (
+      <div className="dashboard-empty-state mt-8">
+        <h2>Under Construction</h2>
+        <p>This tab is currently under development.</p>
+      </div>
     );
   };
 
